@@ -54,16 +54,29 @@ export default {
         compound: [{ on: "orders", keys: { userId: 1, total: -1 }, options: {} }],
     },
 
-    // bare fn -> "default" variant; { variants: {...} } for multiple.
-    // Every query variant runs against every index variant. Must materialize (.toArray()).
+    // Each query is { find, page?, check }, or { variants: { name: { find, page?, check } } }.
+    // find = filter + any sort (return the cursor, DON'T materialize).
+    // page = skip/limit for the TIMED run only (stripped for the accuracy pass).
+    // check = REQUIRED; run on every doc of the full result — false aborts the run.
+    // Every query variant runs against every index variant.
     queries: {
         byUser: {
             variants: {
-                hot: (db) => db.collection("orders").find({ userId: 42 }).toArray(),
-                cold: (db) => db.collection("orders").find({ userId: 4999 }).toArray(),
+                hot: {
+                    find: (db) => db.collection("orders").find({ userId: 42 }),
+                    check: (doc) => doc.userId === 42,
+                },
+                cold: {
+                    find: (db) => db.collection("orders").find({ userId: 4999 }),
+                    check: (doc) => doc.userId === 4999,
+                },
             },
         },
-        top: (db) => db.collection("orders").find().sort({ total: -1 }).limit(10).toArray(),
+        top: {
+            find: (db) => db.collection("orders").find().sort({ total: -1 }),
+            page: { limit: 10 },
+            check: (doc) => doc != null,
+        },
     },
 };
 ```
@@ -80,6 +93,10 @@ export default {
 | `ctx.int(min, max)`, `ctx.pick(arr)` | seeded primitives                                                                  |
 | `ctx.faker`                          | seeded [@faker-js/faker](https://fakerjs.dev)                                      |
 
-The runner: drops the DB, seeds once, then per index variant drops all indexes,
-builds that variant's indexes, and times each query (warmup discarded, then
-`iterations` runs → min/median/p95). See `benchmarks/orders/` for a full example.
+The runner, per seed variant: drops the DB, seeds, then runs an **accuracy pass** —
+each query's full `find` (no pagination) on the index-free collection is a complete
+COLLSCAN ground truth; every doc must pass `check` or the whole run aborts. Then per
+index variant it drops all indexes, builds that variant's, and times each query
+(warmup discarded, then `iterations` runs → min/median/p95). Because a correct index
+never changes results, verifying once per seed variant covers every index variant.
+See `benchmarks/orders/` for a full example.

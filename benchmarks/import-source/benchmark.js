@@ -34,38 +34,38 @@ export default defineBenchmark({
                 options: { partialFilterExpression: { source: { $exists: true } } },
             },
         ],
-        noExist: [
+        nullPartial: [
             {
                 on: "records",
-                keys: { "source.importSource": 1 },
+                keys: { source: 1 },
                 options: { partialFilterExpression: { source: { $eq: null } } },
             },
         ],
     },
 
     // Paginated: non-zero skip, limit ~500 (middle-of-the-road page over 100k docs).
-    // No sort — timing only; add one if you want a deterministic page order.
     queries: {
-        hasSource: (db) =>
-            db
-                .collection("records")
-                .find({ source: { $exists: true } })
-                .skip(2000)
-                .limit(500)
-                .toArray(),
-        noSource: (db) =>
-            db
-                .collection("records")
-                .find({ source: { $exists: false } })
-                .skip(2000)
-                .limit(500)
-                .toArray(),
-        byValue: (db) =>
-            db
-                .collection("records")
-                .find({ "source.importSource": "vendor" })
-                .skip(2000)
-                .limit(500)
-                .toArray(),
+        hasSource: {
+            find: (db) => db.collection("records").find({ source: { $exists: true } }),
+            page: { skip: 2000, limit: 500 },
+            check: (doc) => doc.source != null,
+        },
+        sourceNoExists: {
+            find: (db) => db.collection("records").find({ source: { $exists: false } }),
+            page: { skip: 2000, limit: 500 },
+            check: (doc) => doc.source === undefined,
+        },
+        // Same result set as noSource here (no explicit nulls), but `{ source: null }`
+        // IS planner-indexable — this is the shape the nullPartial index can serve.
+        sourceNull: {
+            find: (db) => db.collection("records").find({ source: null }),
+            page: { skip: 2000, limit: 500 },
+            check: (doc) => doc.source == null,
+        },
+        byValue: {
+            find: (db) => db.collection("records").find({ "source.importSource": "vendor" }),
+            page: { skip: 2000, limit: 500 },
+            check: (doc) => doc.source?.importSource === "vendor",
+        },
     },
 });

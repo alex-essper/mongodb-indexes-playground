@@ -41,13 +41,24 @@ export default defineBenchmark({
     queries: {
         byUser: {
             variants: {
-                hot: (db) => db.collection("orders").find({ userId: 42 }).toArray(),
-                withStatus: (db) =>
-                    db.collection("orders").find({ userId: 42, status: "paid" }).toArray(),
+                hot: {
+                    find: (db) => db.collection("orders").find({ userId: 42 }),
+                    check: (doc) => doc.userId === 42,
+                },
+                withStatus: {
+                    find: (db) => db.collection("orders").find({ userId: 42, status: "paid" }),
+                    check: (doc) => doc.userId === 42 && doc.status === "paid",
+                },
             },
         },
-        byUserTopSpend: (db) =>
-            db.collection("orders").find({ userId: 42 }).sort({ total: -1 }).limit(10).toArray(),
-        byTag: (db) => db.collection("orders").find({ tagIds: 7 }).toArray(),
+        byUserTopSpend: {
+            find: (db) => db.collection("orders").find({ userId: 42 }).sort({ total: -1 }),
+            page: { limit: 10 },
+            check: (doc) => doc.userId === 42,
+        },
+        byTag: {
+            find: (db) => db.collection("orders").find({ tagIds: 7 }),
+            check: (doc) => doc.tagIds.includes(7),
+        },
     },
 });

@@ -33,8 +33,16 @@ export interface Collection<S> {
     doc: (i: number, ctx: Ctx, params: S) => Document;
 }
 
-/** A query the runner times. Must materialize (e.g. `.toArray()`). */
-export type Query = (db: Db) => Promise<unknown>;
+import type { FindCursor } from "mongodb";
+
+export interface Query {
+    /** The query minus pagination (filter + any sort). Return the cursor un-awaited. */
+    find: (db: Db) => FindCursor;
+    /** skip/limit applied to the TIMED run only; stripped for the accuracy pass. */
+    page?: { skip?: number; limit?: number };
+    /** Required. Run on every doc of the full result; return false to abort the run. */
+    check: (doc: Document) => boolean;
+}
 export type QueryGroup = Query | { variants: Record<string, Query> };
 
 export interface BenchmarkDef<S> {
