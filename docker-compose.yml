@@ -1,0 +1,11 @@
+services:
+    mongo:
+        image: mongo:8.0
+        ports:
+            - "27018:27017"
+        command: ["--wiredTigerCacheSizeGB", "1"]
+        healthcheck:
+            test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+            interval: 2s
+            timeout: 5s
+            retries: 15

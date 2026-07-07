@@ -1,0 +1,21 @@
+{
+    "name": "mongodb-indexes-playground",
+    "version": "1.0.0",
+    "description": "Benchmark MongoDB query performance under different index strategies.",
+    "type": "module",
+    "scripts": {
+        "benchmark": "node scripts/run.js",
+        "benchmarks": "node scripts/list.js",
+        "mongo:down": "docker compose down",
+        "test": "node --test",
+        "typecheck": "tsc -p jsconfig.json"
+    },
+    "dependencies": {
+        "@faker-js/faker": "^9.0.0",
+        "mongodb": "^6.10.0"
+    },
+    "devDependencies": {
+        "oxfmt": "^0.58.0",
+        "typescript": "^5.6.0"
+    }
+}
