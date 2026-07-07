@@ -54,31 +54,48 @@ export default {
         compound: [{ on: "orders", keys: { userId: 1, total: -1 }, options: {} }],
     },
 
-    // Each query is { find, page?, check }, or { variants: { name: { find, page?, check } } }.
-    // find = filter + any sort (return the cursor, DON'T materialize).
-    // page = skip/limit for the TIMED run only (stripped for the accuracy pass).
+    // Each query is { query, page?, check }, or { variants: { name: {...} } }.
+    // query = (db) => a cursor, find OR aggregation, minus pagination. Don't materialize.
+    //         e.g. db.collection(x).find({...})  or  .aggregate([...]) (no $skip/$limit).
+    // page  = skip/limit for the TIMED run only (stripped for the accuracy pass;
+    //         works on both find and aggregation cursors).
     // check = REQUIRED; run on every doc of the full result — false aborts the run.
     // Every query variant runs against every index variant.
     queries: {
         byUser: {
             variants: {
                 hot: {
-                    find: (db) => db.collection("orders").find({ userId: 42 }),
+                    query: (db) => db.collection("orders").find({ userId: 42 }),
                     check: (doc) => doc.userId === 42,
                 },
                 cold: {
-                    find: (db) => db.collection("orders").find({ userId: 4999 }),
+                    query: (db) => db.collection("orders").find({ userId: 4999 }),
                     check: (doc) => doc.userId === 4999,
                 },
             },
         },
         top: {
-            find: (db) => db.collection("orders").find().sort({ total: -1 }),
+            query: (db) => db.collection("orders").find().sort({ total: -1 }),
             page: { limit: 10 },
             check: (doc) => doc != null,
         },
     },
 };
+```
+
+Aggregation query (put pagination in `page`, not as `$skip`/`$limit` stages, so the
+accuracy pass can strip it):
+
+```js
+topKinds: {
+    query: (db) =>
+        db.collection("records").aggregate([
+            { $group: { _id: "$kind", total: { $sum: "$n" } } },
+            { $sort: { total: -1 } },
+        ]),
+    page: { limit: 10 },
+    check: (doc) => typeof doc.total === "number",
+},
 ```
 
 ### `ctx` helpers (all seeded/deterministic)

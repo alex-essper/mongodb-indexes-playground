@@ -33,11 +33,12 @@ export interface Collection<S> {
     doc: (i: number, ctx: Ctx, params: S) => Document;
 }
 
-import type { FindCursor } from "mongodb";
+import type { FindCursor, AggregationCursor } from "mongodb";
 
 export interface Query {
-    /** The query minus pagination (filter + any sort). Return the cursor un-awaited. */
-    find: (db: Db) => FindCursor;
+    /** Return a cursor — find OR aggregation — minus pagination ($skip/$limit).
+     *  e.g. `(db) => db.collection(x).find({...})` or `.aggregate([...])`. */
+    query: (db: Db) => FindCursor | AggregationCursor;
     /** skip/limit applied to the TIMED run only; stripped for the accuracy pass. */
     page?: { skip?: number; limit?: number };
     /** Required. Run on every doc of the full result; return false to abort the run. */

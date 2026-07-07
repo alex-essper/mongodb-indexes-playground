@@ -46,24 +46,24 @@ export default defineBenchmark({
     // Paginated: non-zero skip, limit ~500 (middle-of-the-road page over 100k docs).
     queries: {
         hasSource: {
-            find: (db) => db.collection("records").find({ source: { $exists: true } }),
+            query: (db) => db.collection("records").find({ source: { $exists: true } }),
             page: { skip: 2000, limit: 500 },
             check: (doc) => doc.source != null,
         },
         sourceNoExists: {
-            find: (db) => db.collection("records").find({ source: { $exists: false } }),
+            query: (db) => db.collection("records").find({ source: { $exists: false } }),
             page: { skip: 2000, limit: 500 },
             check: (doc) => doc.source === undefined,
         },
         // Same result set as noSource here (no explicit nulls), but `{ source: null }`
         // IS planner-indexable — this is the shape the nullPartial index can serve.
         sourceNull: {
-            find: (db) => db.collection("records").find({ source: null }),
+            query: (db) => db.collection("records").find({ source: null }),
             page: { skip: 2000, limit: 500 },
             check: (doc) => doc.source == null,
         },
         byValue: {
-            find: (db) => db.collection("records").find({ "source.importSource": "vendor" }),
+            query: (db) => db.collection("records").find({ "source.importSource": "vendor" }),
             page: { skip: 2000, limit: 500 },
             check: (doc) => doc.source?.importSource === "vendor",
         },
